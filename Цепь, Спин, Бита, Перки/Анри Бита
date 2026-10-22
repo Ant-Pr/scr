@@ -1,0 +1,102 @@
+// ==UserScript==
+// @name         Я-Stick for Game of Bombs
+// @namespace    http://tampermonkey.net/
+// @version      1.1
+// @description  Press Ц/W to toggle Я/Z key blocking on Game of Bombs
+// @author       You
+// @match        *://gameofbombs.com/*
+// @match        *://*.gameofbombs.com/*
+// @grant        none
+// @run-at       document-start
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    let zStuck = false;
+    let preventZKeyUp = null;
+
+    function logActivity(message) {
+        console.log(`[Я-Stick] ${message}`);
+    }
+
+    // The key to freeze: Z / Я
+    function isZKey(event) {
+        return (
+            event.key === 'z' ||
+            event.key === 'Z' ||
+            event.key === 'я' ||
+            event.key === 'Я' ||
+            event.code === 'KeyZ'
+        );
+    }
+
+    // The toggle key: W / Ц
+    function isToggleKey(event) {
+        return (
+            event.key === 'w' ||
+            event.key === 'W' ||
+            event.key === 'ц' ||
+            event.key === 'Ц' ||
+            event.code === 'KeyW'
+        );
+    }
+
+    function zStick_toggle() {
+        if (!zStuck) {
+            preventZKeyUp = function (event) {
+                if (isZKey(event)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                }
+            };
+
+            document.addEventListener('keyup', preventZKeyUp, true);
+
+            zStuck = true;
+            logActivity('Я/Z key BLOCKED');
+        } else {
+            if (preventZKeyUp) {
+                document.removeEventListener('keyup', preventZKeyUp, true);
+                preventZKeyUp = null;
+            }
+
+            zStuck = false;
+            logActivity('Я/Z key UNBLOCKED');
+        }
+    }
+
+    document.addEventListener(
+        'keydown',
+        function (event) {
+            if (
+                isToggleKey(event) &&
+                !event.repeat && // ignore auto-repeat while W is held
+                !event.ctrlKey &&
+                !event.altKey &&
+                !event.metaKey
+            ) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                zStick_toggle();
+            }
+        },
+        true
+    );
+
+    window.addEventListener('beforeunload', () => {
+        if (preventZKeyUp) {
+            document.removeEventListener('keyup', preventZKeyUp, true);
+        }
+    });
+
+    window.toggleZStick = function () {
+        zStick_toggle();
+        return `Я-Stick is now ${zStuck ? 'BLOCKED' : 'UNBLOCKED'}`;
+    };
+
+    console.log('✅ Я-Stick loaded on Game of Bombs');
+})();
